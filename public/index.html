@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Medication Scheduler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <h1>Medication Scheduler</h1>
+    <form id="scheduleForm">
+      <label for="device">Select Device</label>
+      <select id="device" name="device" required>
+        <option value="">--Select Device--</option>
+        <option value="1">Device 1</option>
+        <option value="2">Device 2</option>
+      </select>
+
+      <label for="pod">Select Pod</label>
+      <select id="pod" name="pod" required>
+        <option value="">--Select Pod--</option>
+      </select>
+
+      <label for="name">Patient Name</label>
+      <input type="text" id="name" name="name" required>
+
+      <label for="time">Dosage Time</label>
+      <input type="time" id="time" name="time" required>
+
+      <button type="submit">Add Schedule</button>
+    </form>
+  </div>
+
+  <script>
+    // Pod selection logic (unchanged)
+    const podOptions = {
+      "1": [
+        {value: "1", text: "Pod 1"},
+        {value: "2", text: "Pod 2"},
+        {value: "3", text: "Pod 3"}
+      ],
+      "2": [
+        {value: "4", text: "Pod 4"},
+        {value: "5", text: "Pod 5"},
+        {value: "6", text: "Pod 6"}
+      ]
+    };
+
+    document.getElementById('device').addEventListener('change', function () {
+      const device = this.value;
+      const podSelect = document.getElementById('pod');
+      podSelect.innerHTML = '<option value="">--Select Pod--</option>';
+      if (podOptions[device]) {
+        podOptions[device].forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.text = opt.text;
+          podSelect.appendChild(option);
+        });
+      }
+    });
+
+    // Function to add 5 hours 30 minutes to a "HH:mm" string
+    function addFiveThirty(timeStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      let totalMinutes = h * 60 + m + 330; // 330 = 5*60 + 30
+      totalMinutes = totalMinutes % (24 * 60); // wrap around 24 hours
+      const newH = Math.floor(totalMinutes / 60);
+      const newM = totalMinutes % 60;
+      return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+    }
+
+    document.getElementById('scheduleForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('name').value,
+        device: document.getElementById('device').value,
+        pod: document.getElementById('pod').value,
+        // Add 5:30 to the time before sending
+        time: addFiveThirty(document.getElementById('time').value)
+      };
+      const response = await fetch('/add-patient', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      });
+      const text = await response.text();
+      alert(text);
+      document.getElementById('scheduleForm').reset();
+      document.getElementById('pod').innerHTML = '<option value="">--Select Pod--</option>';
+    });
+  </script>
+</body>
+</html>
