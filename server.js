@@ -62,31 +62,29 @@ app.get('/api/schedule', async (req, res) => {
     // 1. Get today's date in IST
     const todayIST = DateTime.now().setZone('Asia/Kolkata').toFormat('yyyy-MM-dd');
 
-    // 2. Fetch entries where IST date matches today
+    // 2. Fetch today's doses for this device/pod.
+    //    A single UTC->IST conversion (done in Postgres) returns the wall-clock
+    //    time already formatted in IST. This replaces the earlier double
+    //    "AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata'", which re-labelled the
+    //    UTC wall clock as IST and shifted every dose by +5:30.
     const result = await pool.query(
-      `SELECT *,
-       (dose_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') AS dose_time_ist
+      `SELECT id, patient_name, device, pod,
+              to_char(dose_time AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD HH24:MI:SS') AS dose_time_ist
        FROM medication_schedule
        WHERE device = $1 AND pod = $2
-       AND (dose_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $3::date
+         AND (dose_time AT TIME ZONE 'Asia/Kolkata')::date = $3::date
        ORDER BY dose_time ASC`,
       [device, pod, todayIST]
     );
 
-    // 3. Format dose_time_ist in IST
-    const rows = result.rows.map(row => {
-      const formattedIST = DateTime.fromJSDate(row.dose_time_ist)
-        .setZone('Asia/Kolkata')
-        .toFormat('yyyy-MM-dd HH:mm:ss');
-
-      return {
-        id: row.id,
-        patient_name: row.patient_name,
-        device: row.device,
-        pod: row.pod,
-        dose_time: formattedIST
-      };
-    });
+    // 3. dose_time_ist is already an IST-formatted string from Postgres.
+    const rows = result.rows.map(row => ({
+      id: row.id,
+      patient_name: row.patient_name,
+      device: row.device,
+      pod: row.pod,
+      dose_time: row.dose_time_ist
+    }));
 
     res.json(rows);
   } catch (err) {

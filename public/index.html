@@ -62,24 +62,15 @@
       }
     });
 
-    // Function to add 5 hours 30 minutes to a "HH:mm" string
-    function addFiveThirty(timeStr) {
-      const [h, m] = timeStr.split(':').map(Number);
-      let totalMinutes = h * 60 + m + 330; // 330 = 5*60 + 30
-      totalMinutes = totalMinutes % (24 * 60); // wrap around 24 hours
-      const newH = Math.floor(totalMinutes / 60);
-      const newM = totalMinutes % 60;
-      return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
-    }
-
     document.getElementById('scheduleForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       const data = {
         name: document.getElementById('name').value,
         device: document.getElementById('device').value,
         pod: document.getElementById('pod').value,
-        // Add 5:30 to the time before sending
-        time: addFiveThirty(document.getElementById('time').value)
+        // Send the time exactly as entered (IST). The server stores it as an
+        // absolute UTC instant and converts back to IST on read.
+        time: document.getElementById('time').value
       };
       const response = await fetch('/add-patient', {
         method: 'POST',
